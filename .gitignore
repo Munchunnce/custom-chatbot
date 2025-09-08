@@ -1,0 +1,42 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Ignore environment files
+.env
+.env.* 
+**/.env
+**/.env.*
+
+# Ignore node_modules
+node_modules/
+
+# Ignore package managers' lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore build and production files
+/.pnp
+.pnp.js
+/coverage
+/build
+/dist
+/out
+
+# Ignore OS & Editor-specific files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore logs and debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore specific environment overrides
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
