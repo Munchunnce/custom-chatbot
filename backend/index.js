@@ -3,17 +3,19 @@ import { MessagesAnnotation, StateGraph } from '@langchain/langgraph';
 import readline from 'node:readline/promises';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { TavilySearch } from "@langchain/tavily";
+import { MemorySaver } from "@langchain/langgraph";
 
+const checkpointer = new MemorySaver();
 
 const tool = new TavilySearch({
   maxResults: 3,
   topic: "general",
+  searchDepth: "basic",
+  timeRange: "day",
   // includeAnswer: false,
   // includeRawContent: false,
   // includeImages: false,
   // includeImageDescriptions: false,
-  // searchDepth: "basic",
-  // timeRange: "day",
   // includeDomains: [],
   // excludeDomains: [],
 });
@@ -53,8 +55,23 @@ async function callModel(state) {
 /**
  * biuld the graph
  */
+// Sanitize function (in case tool calls contain null)
+function sanitizeToolCalls(message) {
+  if (message.tool_calls) {
+    message.tool_calls = message.tool_calls.map(tc => {
+      if (tc.args.timeRange == null) {
+        tc.args.timeRange = "day"; // fallback
+      }
+      return tc;
+    });
+  }
+  return message;
+}
+
+//  Conditional edge
 function shouldCondition(state) {
-    const lastMessage = state.messages[state.messages.length - 1];
+    let lastMessage = state.messages[state.messages.length - 1];
+    lastMessage = sanitizeToolCalls(lastMessage);
     if(lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
         return 'tools';
     }
@@ -70,7 +87,8 @@ const workFlow = new StateGraph(MessagesAnnotation)
 /**
  * Compile the graph
  */    
-const app = workFlow.compile();
+const app = workFlow.compile({ checkpointer });
+
 async function main() {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
@@ -80,7 +98,11 @@ async function main() {
 
         const finalState = await app.invoke({
             messages: [{ role: 'user', content: userInput }]
-        });
+        },
+        {
+            configurable: { thread_id: 'id'}
+        }
+    );
 
         const lastMessage = await finalState.messages[finalState.messages.length - 1];
         // Agar tool-call hai, to uska result agent se aayega
